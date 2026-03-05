@@ -334,12 +334,6 @@
     color: var(--text);
     background: var(--bg-input);
   }
-  .suggestion-btn.guided {
-    border-color: var(--accent-dim);
-    color: var(--accent);
-    background: var(--accent-glow);
-  }
-  .suggestion-btn.guided:hover { background: rgba(200,136,15,0.2); }
 
   /* Chat area */
   .chat-area {
@@ -349,18 +343,18 @@
     background: var(--bg);
   }
 
-  /* Mode bar */
-  .mode-bar {
-    display: flex;
-    gap: 0;
+  /* Chat header */
+  .chat-header {
     padding: 12px 20px;
     border-bottom: 1px solid var(--border-soft);
+    display: flex;
     align-items: center;
   }
-  .mode-btn {
+  .btn-clear-chat {
     background: none;
     border: 1px solid var(--border);
-    padding: 6px 16px;
+    border-radius: 5px;
+    padding: 6px 14px;
     font-family: 'DM Sans', sans-serif;
     font-size: 12px;
     font-weight: 500;
@@ -368,29 +362,7 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  .mode-btn:first-child { border-radius: 5px 0 0 5px; }
-  .mode-btn:last-child { border-radius: 0 5px 5px 0; border-left: none; }
-  .mode-btn.active {
-    background: var(--accent-glow);
-    border-color: var(--accent-dim);
-    color: var(--accent);
-  }
-  .mode-spacer {
-    flex: 1;
-  }
-  .btn-new-chat {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 6px 10px;
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .btn-new-chat:hover {
+  .btn-clear-chat:hover {
     border-color: var(--accent-dim);
     color: var(--accent);
     background: var(--accent-glow);
@@ -597,7 +569,7 @@
     border-top: 1px solid var(--border);
     display: flex;
     gap: 10px;
-    align-items: flex-end;
+    align-items: center;
     background: var(--bg-surface);
   }
   .input-wrap {
@@ -633,7 +605,6 @@
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
     transition: background 0.15s, transform 0.1s;
-    margin-bottom: 1px;
   }
   .send-btn:hover { background: #dfa030; }
   .send-btn:active { transform: scale(0.95); }
@@ -754,22 +725,15 @@
           <button class="suggestion-btn" onclick="sendSuggestion('I want something funny, I really need a good laugh')">😂 Need a laugh</button>
           <button class="suggestion-btn" onclick="sendSuggestion('A quiet, thoughtful film to wind down the evening')">🌙 Wind down</button>
           <button class="suggestion-btn" onclick="sendSuggestion('Something visually stunning and cinematic')">🎨 Visually stunning</button>
-          <button class="suggestion-btn guided" onclick="startGuided()">🎲 Help me decide</button>
+          <button class="suggestion-btn" onclick="startGuided()">🎲 Help me decide</button>
         </div>
       </div>
     </aside>
 
     <!-- Chat -->
     <main class="chat-area">
-      <div class="mode-bar">
-        <button id="btn-direct" class="mode-btn active" onclick="setMode('direct')">Direct search</button>
-        <button id="btn-guided" class="mode-btn" onclick="setMode('guided')">Help me decide</button>
-        <div class="mode-spacer"></div>
-        <button class="btn-new-chat" onclick="resetChat()" title="New chat">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-        </button>
+      <div class="chat-header">
+        <button class="btn-clear-chat" onclick="resetChat()">Clear chat</button>
       </div>
 
       <div class="messages" id="messages">
@@ -1018,8 +982,6 @@ function getFilters() {
 
 function setMode(m) {
   currentMode = m;
-  document.getElementById('btn-direct').classList.toggle('active', m === 'direct');
-  document.getElementById('btn-guided').classList.toggle('active', m === 'guided');
 }
 
 function sendSuggestion(text) {
