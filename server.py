@@ -367,12 +367,14 @@ async def get_plex_link(rating_key: str):
     # Extract just the numeric rating key if it's a full path
     if "/" in rating_key:
         # Extract from path like "/library/metadata/12345"
-        rating_key = rating_key.split("/")[-1]
+        parts = rating_key.split("/")
+        rating_key = parts[-1] if parts[-1] else parts[-2]
 
-    # Construct URLs
+    # Construct URLs - use preplay to show movie details page
     metadata_key = f"/library/metadata/{rating_key}"
-    app_url = f"plex://play?key={metadata_key}&server={machine_id}"
-    web_url = f"{plex_url}/web/index.html#!/server/{machine_id}/details?key={metadata_key}"
+    from urllib.parse import quote
+    app_url = f"plex://preplay?metadataKey={quote(metadata_key)}&server={machine_id}"
+    web_url = f"{plex_url}/web/index.html#!/server/{machine_id}/details?key={quote(metadata_key)}"
 
     return {
         "app_url": app_url,
