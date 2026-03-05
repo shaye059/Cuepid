@@ -375,6 +375,26 @@
     border-color: var(--accent-dim);
     color: var(--accent);
   }
+  .mode-spacer {
+    flex: 1;
+  }
+  .btn-new-chat {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 10px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-new-chat:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
 
   /* Messages */
   .messages {
@@ -744,6 +764,12 @@
       <div class="mode-bar">
         <button id="btn-direct" class="mode-btn active" onclick="setMode('direct')">Direct search</button>
         <button id="btn-guided" class="mode-btn" onclick="setMode('guided')">Help me decide</button>
+        <div class="mode-spacer"></div>
+        <button class="btn-new-chat" onclick="resetChat()" title="New chat">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
       </div>
 
       <div class="messages" id="messages">
@@ -791,6 +817,68 @@ const FILTERS = {
   '80s':   { min_year: 1980, max_year: 1989 },
   classic: { max_year: 1979 },
 };
+
+// Command registry - easily extensible for new commands
+const COMMANDS = {
+  new: {
+    description: 'Start a new chat conversation',
+    aliases: ['clear', 'reset'],
+    handler: () => {
+      resetChat();
+      return true; // Command handled
+    }
+  },
+  help: {
+    description: 'Show available chat commands',
+    aliases: [],
+    handler: () => {
+      showCommandHelp();
+      return true; // Command handled
+    }
+  }
+  // Future commands can be added here:
+  // guide: {
+  //   description: 'Enter guided mode with questions',
+  //   aliases: [],
+  //   handler: () => { startGuided(); return true; }
+  // }
+};
+
+// Command detection and execution
+function handleCommand(text) {
+  // Check if text is a command (starts with /)
+  if (!text.startsWith('/')) return false;
+
+  // Extract command and args
+  const parts = text.slice(1).trim().split(/\s+/);
+  const cmdName = parts[0].toLowerCase();
+  const args = parts.slice(1);
+
+  // Find matching command (check name and aliases)
+  for (const [name, cmd] of Object.entries(COMMANDS)) {
+    if (name === cmdName || cmd.aliases.includes(cmdName)) {
+      return cmd.handler(args);
+    }
+  }
+
+  // Unknown command
+  appendBubble('assistant', `⚠ Unknown command: /${cmdName}\n\nType /help to see available commands.`);
+  return true; // Still handled (don't send to backend)
+}
+
+function showCommandHelp() {
+  let helpText = '**Available Commands:**\n\n';
+  for (const [name, cmd] of Object.entries(COMMANDS)) {
+    helpText += `**/${name}** — ${cmd.description}`;
+    if (cmd.aliases.length > 0) {
+      helpText += ` (aliases: ${cmd.aliases.map(a => '/' + a).join(', ')})`;
+    }
+    helpText += '\n\n';
+  }
+  helpText += 'Commands can be typed in the chat or triggered via buttons in the UI.';
+
+  appendBubble('assistant', helpText);
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -944,10 +1032,52 @@ function startGuided() {
   sendSuggestion("Help me find something to watch. Ask me some questions to figure out what I'm in the mood for.");
 }
 
+function resetChat() {
+  // Clear chat state
+  chatHistory = [];
+  currentMovieContext = {};
+  isStreaming = false;
+
+  // Reset mode to direct
+  setMode('direct');
+
+  // Clear messages container
+  const msgs = document.getElementById('messages');
+  msgs.innerHTML = '';
+
+  // Show welcome message
+  const welcome = document.createElement('div');
+  welcome.className = 'welcome';
+  welcome.id = 'welcome-msg';
+  welcome.innerHTML = `
+    <span class="welcome-icon">🎬</span>
+    <h2>What are you in the mood for?</h2>
+    <p>Describe what you're feeling, ask for something specific, or use <em>Help me decide</em> to let me ask you a few questions and find the perfect film from your library.</p>
+  `;
+  msgs.appendChild(welcome);
+
+  // Clear and focus input
+  const input = document.getElementById('chat-input');
+  input.value = '';
+  autoResize(input);
+  input.focus();
+
+  // Re-enable send button
+  document.getElementById('send-btn').disabled = false;
+}
+
 async function sendMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text || isStreaming) return;
+
+  // Check if this is a command
+  if (handleCommand(text)) {
+    input.value = '';
+    autoResize(input);
+    input.focus();
+    return;
+  }
 
   // Clear welcome
   const welcome = document.getElementById('welcome-msg');
