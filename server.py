@@ -354,15 +354,11 @@ async def get_poster(key: str):
 
 @app.get("/api/plex-link")
 async def get_plex_link(rating_key: str):
-    """Generate Plex app and web URLs for a movie."""
+    """Generate Plex web URL for a movie (matches Overseerr implementation)."""
     if not _plex:
         raise HTTPException(400, "Not connected to Plex")
-    if not CONFIG_FILE.exists():
-        raise HTTPException(400, "Not configured")
 
-    cfg = json.loads(CONFIG_FILE.read_text())
     machine_id = _plex.machineIdentifier
-    plex_url = cfg['plex_url']
 
     # Extract just the numeric rating key if it's a full path
     if "/" in rating_key:
@@ -370,14 +366,11 @@ async def get_plex_link(rating_key: str):
         parts = rating_key.split("/")
         rating_key = parts[-1] if parts[-1] else parts[-2]
 
-    # Construct URLs - use preplay to show movie details page
-    metadata_key = f"/library/metadata/{rating_key}"
-    from urllib.parse import quote
-    app_url = f"plex://preplay?metadataKey={quote(metadata_key)}&server={machine_id}"
-    web_url = f"{plex_url}/web/index.html#!/server/{machine_id}/details?key={quote(metadata_key)}"
+    # Construct web URL using Overseerr's approach
+    # URL encode the metadata key path: /library/metadata/{rating_key} -> %2Flibrary%2Fmetadata%2F{rating_key}
+    web_url = f"https://app.plex.tv/desktop#!/server/{machine_id}/details?key=%2Flibrary%2Fmetadata%2F{rating_key}"
 
     return {
-        "app_url": app_url,
         "web_url": web_url
     }
 
