@@ -1339,25 +1339,17 @@ async function openInPlex(movie) {
       return;
     }
 
-    // Fetch Plex URLs from backend
+    // Fetch Plex web URL from backend
     const response = await fetch(`/api/plex-link?rating_key=${encodeURIComponent(key)}`);
     if (!response.ok) {
-      console.error('Failed to get Plex URLs');
+      console.error('Failed to get Plex URL');
       return;
     }
 
-    const { app_url, web_url } = await response.json();
+    const { web_url } = await response.json();
 
-    // Try to open in Plex app first
-    window.location.href = app_url;
-
-    // After a short delay, if still on page, fall back to web interface
-    setTimeout(() => {
-      // If the page is still focused (app didn't open), open web URL
-      if (document.hasFocus()) {
-        window.open(web_url, '_blank');
-      }
-    }, 1000);
+    // Open in Plex web interface
+    window.open(web_url, '_blank');
 
   } catch (error) {
     console.error('Error opening in Plex:', error);
