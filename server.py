@@ -352,6 +352,34 @@ async def get_poster(key: str):
         return Response(r.content, media_type=r.headers.get("content-type", "image/jpeg"))
 
 
+@app.get("/api/plex-link")
+async def get_plex_link(rating_key: str):
+    """Generate Plex app and web URLs for a movie."""
+    if not _plex:
+        raise HTTPException(400, "Not connected to Plex")
+    if not CONFIG_FILE.exists():
+        raise HTTPException(400, "Not configured")
+
+    cfg = json.loads(CONFIG_FILE.read_text())
+    machine_id = _plex.machineIdentifier
+    plex_url = cfg['plex_url']
+
+    # Extract just the numeric rating key if it's a full path
+    if "/" in rating_key:
+        # Extract from path like "/library/metadata/12345"
+        rating_key = rating_key.split("/")[-1]
+
+    # Construct URLs
+    metadata_key = f"/library/metadata/{rating_key}"
+    app_url = f"plex://play?key={metadata_key}&server={machine_id}"
+    web_url = f"{plex_url}/web/index.html#!/server/{machine_id}/details?key={metadata_key}"
+
+    return {
+        "app_url": app_url,
+        "web_url": web_url
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)

@@ -476,10 +476,14 @@
     padding: 10px;
     width: 100%;
     max-width: 340px;
-    transition: border-color 0.15s;
-    cursor: default;
+    transition: all 0.15s;
+    cursor: pointer;
   }
-  .movie-card:hover { border-color: var(--accent-dim); }
+  .movie-card:hover {
+    border-color: var(--accent-dim);
+    background: var(--bg-input);
+    transform: translateY(-1px);
+  }
   .poster-wrap {
     flex-shrink: 0;
     width: 52px; height: 78px;
@@ -1203,6 +1207,7 @@ function renderAiBubble(els, text, moviesMeta) {
 function buildMovieCard(m) {
   const card = document.createElement('div');
   card.className = 'movie-card';
+  card.onclick = () => openInPlex(m);
 
   const posterWrap = document.createElement('div');
   posterWrap.className = 'poster-wrap';
@@ -1321,6 +1326,41 @@ function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
+  }
+}
+
+// ── Plex integration ──────────────────────────────────────────────────────────
+async function openInPlex(movie) {
+  try {
+    // Use the key from movie metadata (e.g., "/library/metadata/12345")
+    const key = movie.key;
+    if (!key) {
+      console.error('No key found for movie:', movie);
+      return;
+    }
+
+    // Fetch Plex URLs from backend
+    const response = await fetch(`/api/plex-link?rating_key=${encodeURIComponent(key)}`);
+    if (!response.ok) {
+      console.error('Failed to get Plex URLs');
+      return;
+    }
+
+    const { app_url, web_url } = await response.json();
+
+    // Try to open in Plex app first
+    window.location.href = app_url;
+
+    // After a short delay, if still on page, fall back to web interface
+    setTimeout(() => {
+      // If the page is still focused (app didn't open), open web URL
+      if (document.hasFocus()) {
+        window.open(web_url, '_blank');
+      }
+    }, 1000);
+
+  } catch (error) {
+    console.error('Error opening in Plex:', error);
   }
 }
 
