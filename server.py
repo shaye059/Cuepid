@@ -166,7 +166,7 @@ def _log_search(query: str, metadatas: list, distances: list, turn: int) -> None
     SEP = "─" * 62
     print(f"\n{SEP}")
     print(f"  TURN {turn}  │  MODE: search")
-    print(f"  QUERY  "{query}"")
+    print(f"  QUERY  '{query}' ")
     print(f"  RESULTS ({len(metadatas)})")
     for i, (m, d) in enumerate(zip(metadatas, distances), 1):
         # Convert L2 distance to a 0–1 similarity score (1 = identical)
