@@ -161,6 +161,29 @@ def _search(query: str, n: int = 15, filters: dict = None) -> list:
     return r["metadatas"][0]
 
 
+def _synthesize_query(msgs: list) -> str:
+    """Ask Claude to write an optimal semantic search query from the conversation so far."""
+    try:
+        resp = _claude.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=120,
+            messages=msgs + [{
+                "role": "user",
+                "content": (
+                    "Based on this conversation, write a single descriptive sentence (two at most) "
+                    "that captures what kind of movie the user is looking for — mood, energy, genre, "
+                    "themes, and any specific preferences or exclusions mentioned. "
+                    "Write only the search query, nothing else."
+                ),
+            }],
+        )
+        return resp.content[0].text.strip()
+    except Exception:
+        # Fall back to last user message
+        user_msgs = [m for m in msgs if m["role"] == "user"]
+        return user_msgs[-1]["content"] if user_msgs else ""
+
+
 def _system_prompt(movies: list, mode: str) -> str:
     if movies:
         rows = []
@@ -179,10 +202,14 @@ def _system_prompt(movies: list, mode: str) -> str:
     if mode == "guided":
         mode_block = """
 GUIDED MODE — help the user discover what they want through warm conversation.
-• Open with ONE question about their current mood or energy level.
-• Ask ONE follow-up at a time (length preference, solo/group, themes to avoid, etc.).
-• After 3–5 exchanges, recommend 2–3 specific films from the list above.
-• Be like a knowledgeable friend at a video store: curious, enthusiastic, personal."""
+Work through these five questions, ONE at a time, in order:
+  1. Mood — What kind of mood are you in right now? (e.g. fun, tense, emotional, cozy, mind-blowing, romantic, unsettling)
+  2. Energy — What level of energy do you want? (slow and atmospheric / medium-paced / gripping from the start)
+  3. Story/setting — Do you want a specific type of story or setting? (e.g. crime, sci-fi, historical, surreal, intimate character drama, big spectacle)
+  4. Anchors — What's something you've liked recently, and what's something you don't want?
+  5. Challenge — How "challenging" do you want the movie to be? (easy watch / a little layered / makes you really think)
+After all five answers (or sooner if the picture is already clear), recommend 2–3 specific films from the list above.
+Be like a knowledgeable friend at a video store: curious, enthusiastic, personal. Never ask more than one question at a time."""
     else:
         mode_block = """
 DIRECT MODE — the user has a specific request.
@@ -316,11 +343,10 @@ async def chat(body: ChatBody):
     if not _collection or _collection.count() == 0:
         raise HTTPException(400, "Library not indexed yet — use the Index Library button first")
 
-    user_msgs = [m for m in body.messages if m.role == "user"]
-    query = user_msgs[-1].content if user_msgs else ""
+    msgs = [{"role": m.role, "content": m.content} for m in body.messages]
+    query = _synthesize_query(msgs)
     movies = _search(query, n=15, filters=body.filters or {})
     system = _system_prompt(movies, body.mode)
-    msgs = [{"role": m.role, "content": m.content} for m in body.messages]
 
     async def _gen():
         # First event: send movie metadata so frontend can render cards
