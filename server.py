@@ -209,7 +209,7 @@ Work through these five questions, ONE at a time, in order:
   4. Anchors — What's something you've liked recently, and what's something you don't want?
   5. Challenge — How "challenging" do you want the movie to be? (easy watch / a little layered / makes you really think)
 After all five answers (or sooner if the picture is already clear), recommend 2–3 specific films from the list above.
-Be like a knowledgeable friend at a video store: curious, enthusiastic, personal. Never ask more than one question at a time."""
+Be concise — ask each question in one short sentence, no preamble, no filler. Never ask more than one question at a time."""
     else:
         mode_block = """
 DIRECT MODE — the user has a specific request.
