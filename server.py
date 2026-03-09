@@ -157,23 +157,30 @@ def _search(query: str, n: int = 15, filters: dict = None) -> tuple[list, list]:
         query_embeddings=[emb],
         n_results=actual_n,
         where=where,
-        include=["metadatas", "distances"],
+        include=["metadatas", "distances", "documents"],
     )
-    return r["metadatas"][0], r["distances"][0]
+    return r["metadatas"][0], r["distances"][0], r["documents"][0]
 
 
-def _log_search(query: str, metadatas: list, distances: list, turn: int) -> None:
+def _log_search(query: str, metadatas: list, distances: list, documents: list, turn: int) -> None:
     SEP = "─" * 62
     print(f"\n{SEP}")
     print(f"  TURN {turn}  │  MODE: search")
     print(f"  QUERY  '{query}' ")
     print(f"  RESULTS ({len(metadatas)})")
-    for i, (m, d) in enumerate(zip(metadatas, distances), 1):
-        # Convert L2 distance to a 0–1 similarity score (1 = identical)
+    for i, (m, d, doc) in enumerate(zip(metadatas, distances, documents), 1):
         similarity = 1 / (1 + d)
         genres = (m.get("genres") or "—")[:28]
         title  = f"{m['title']} ({m['year']})"
+        # Extract summary line from the document text
+        summary = ""
+        for line in doc.splitlines():
+            if line.startswith("Summary:"):
+                summary = line[len("Summary:"):].strip()[:120]
+                break
         print(f"  {i:>2}.  {title:<32}  sim={similarity:.3f}  {genres}")
+        if summary:
+            print(f"        {summary}")
     print(SEP)
 
 
@@ -372,8 +379,8 @@ async def chat(body: ChatBody):
     else:
         query = _synthesize_query(msgs)
 
-    movies, distances = _search(query, n=15, filters=body.filters or {})
-    _log_search(query, movies, distances, turn)
+    movies, distances, documents = _search(query, n=15, filters=body.filters or {})
+    _log_search(query, movies, distances, documents, turn)
     system = _system_prompt(movies, body.mode)
 
     async def _gen():
