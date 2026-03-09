@@ -132,9 +132,10 @@ def _movie_doc(movie):
     return text, meta
 
 
-def _search(query: str, n: int = 15, filters: dict = None) -> list:
+def _search(query: str, n: int = 15, filters: dict = None) -> tuple[list, list]:
+    """Returns (metadatas, distances). ChromaDB uses L2; lower distance = closer match."""
     if not _collection or _collection.count() == 0:
-        return []
+        return [], []
     emb = _embedder.encode(query).tolist()
 
     where = None
@@ -158,7 +159,22 @@ def _search(query: str, n: int = 15, filters: dict = None) -> list:
         where=where,
         include=["metadatas", "distances"],
     )
-    return r["metadatas"][0]
+    return r["metadatas"][0], r["distances"][0]
+
+
+def _log_search(query: str, metadatas: list, distances: list, turn: int) -> None:
+    SEP = "─" * 62
+    print(f"\n{SEP}")
+    print(f"  TURN {turn}  │  MODE: search")
+    print(f"  QUERY  "{query}"")
+    print(f"  RESULTS ({len(metadatas)})")
+    for i, (m, d) in enumerate(zip(metadatas, distances), 1):
+        # Convert L2 distance to a 0–1 similarity score (1 = identical)
+        similarity = 1 / (1 + d)
+        genres = (m.get("genres") or "—")[:28]
+        title  = f"{m['title']} ({m['year']})"
+        print(f"  {i:>2}.  {title:<32}  sim={similarity:.3f}  {genres}")
+    print(SEP)
 
 
 def _synthesize_query(msgs: list) -> str:
@@ -348,7 +364,9 @@ async def chat(body: ChatBody):
 
     msgs = [{"role": m.role, "content": m.content} for m in body.messages]
     query = _synthesize_query(msgs)
-    movies = _search(query, n=15, filters=body.filters or {})
+    movies, distances = _search(query, n=15, filters=body.filters or {})
+    turn = sum(1 for m in body.messages if m.role == "user")
+    _log_search(query, movies, distances, turn)
     system = _system_prompt(movies, body.mode)
 
     async def _gen():
