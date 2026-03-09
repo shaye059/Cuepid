@@ -363,9 +363,16 @@ async def chat(body: ChatBody):
         raise HTTPException(400, "Library not indexed yet — use the Index Library button first")
 
     msgs = [{"role": m.role, "content": m.content} for m in body.messages]
-    query = _synthesize_query(msgs)
-    movies, distances = _search(query, n=15, filters=body.filters or {})
     turn = sum(1 for m in body.messages if m.role == "user")
+    user_msgs = [m for m in body.messages if m.role == "user"]
+    last_user_msg = user_msgs[-1].content if user_msgs else ""
+
+    if turn <= 1:
+        query = last_user_msg
+    else:
+        query = _synthesize_query(msgs)
+
+    movies, distances = _search(query, n=15, filters=body.filters or {})
     _log_search(query, movies, distances, turn)
     system = _system_prompt(movies, body.mode)
 
